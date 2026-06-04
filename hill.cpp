@@ -9,39 +9,21 @@ vector<char32_t> genalphabet() {
     for (char32_t c = 0x41; c <= 0x5A; ++c) alphabet.push_back(c);
     // a-z
     for (char32_t c = 0x61; c <= 0x7A; ++c) alphabet.push_back(c);
-    // А-Я
+    // А-Я + Ё
     for (char32_t c = 0x410; c <= 0x42F; ++c) alphabet.push_back(c);
-    // а-я
+    alphabet.push_back(0x401); // Ё
+    // а-я + ё
     for (char32_t c = 0x430; c <= 0x44F; ++c) alphabet.push_back(c);
+    alphabet.push_back(0x451); // ё
     // 0-9
     for (char32_t c = 0x30; c <= 0x39; ++c) alphabet.push_back(c);
 
     // Знаки препинания
     const char32_t punct[] = {
-        0x20,  // ' '
-        0x21,  // '!'
-        0x40,  // '@'
-        0x23,  // '#'
-        0x24,  // '$'
-        0x25,  // '%'
-        0x5E,  // '^'
-        0x26,  // '&'
-        0x2A,  // '*'
-        0x28,  // '('
-        0x29,  // ')'
-        0x2D,  // '-'
-        0x5F,  // '_'
-        0x3D,  // '='
-        0x2B,  // '+'
-        0x5C,  // '\'
-        0x7C,  // '|'
-        0x2F,  // '/'
-        0x22,  // '"'
-        0x3A,  // ':'
-        0x3B,  // ';'
-        0x2E,  // '.'
-        0x2C,  // ','
-        0x3F   // '?'
+        0x20, 0x21, 0x40, 0x23, 0x24, 0x25, 0x5E, 0x26, 0x2A,
+        0x28, 0x29, 0x2D, 0x5F, 0x3D, 0x2B, 0x5C, 0x7C, 0x2F,
+        0x22, 0x3A, 0x3B, 0x2E, 0x2C, 0x3F, 0xA, 0xD, 0x9,
+        0xAB, 0xBB, 0x2014, 0x2013, 0x2026, 0x2018, 0x2019, 0x201C, 0x201D
     };
     for (char32_t c : punct) alphabet.push_back(c);
 
@@ -90,7 +72,7 @@ int charToIndex(char32_t c, const vector<char32_t>& alphabet) {
     for (int i = 0; i < (int)alphabet.size(); i++) {
         if (alphabet[i] == c) return i;
     }
-    cerr << "Ошибка: Символ не найден в алфавите!\n";
+    cerr << "Ошибка: символ U+" << hex << uppercase << (uint32_t)c << " не найден в алфавите!\n";
     return -1;
 }
 
@@ -257,6 +239,33 @@ Matrix keyFromWord(const string& word, int n, const vector<char32_t>& alphabet) 
                 K[i][j] = dist(rng);
     } while (!isRightKey(K, m));
 
+    return K;
+}
+
+// Сохранение матрицы в файл
+void saveKey(const Matrix& K, const string& filename) {
+    ofstream f(filename);
+    if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return; }
+    f << K.size() << "\n";
+    for (auto& row : K) {
+        for (int i = 0; i < (int)row.size(); i++) {
+            f << row[i];
+            if (i + 1 < (int)row.size()) f << " ";
+        }
+        f << "\n";
+    }
+}
+
+// Загрузка матрицы из файла
+Matrix loadKey(const string& filename) {
+    ifstream f(filename);
+    if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return {}; }
+    int n;
+    f >> n;
+    Matrix K(n, vector<int>(n));
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            f >> K[i][j];
     return K;
 }
 

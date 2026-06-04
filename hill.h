@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdint>
+#include <fstream>
 
 using namespace std;
 
@@ -27,9 +28,12 @@ Matrix invMatrix(const Matrix& A, int m);
 bool isRightKey(const Matrix& A, int m);
 Matrix keyFromWord(const string& word, int n, const vector<char32_t>& alphabet);
 
-// UTF-8 утилиты
 vector<char32_t> to_codes(const string& str);
 string to_text(const vector<char32_t>& codes);
+
+// Файловые операции с ключом
+void saveKey(const Matrix& K, const string& filename);
+Matrix loadKey(const string& filename);
 
 // Шифрование / дешифрование
 string encrypt(const string& text, const Matrix& K, const vector<char32_t>& alphabet);

@@ -1,23 +1,47 @@
-#include <iostream>
-#include <vector>
-#include <cstdint>
-
-using namespace std;
-
-using Matrix = vector<vector<int>>;
+#include "hill.h"
+#include <random>
 
 // Генерация алфавита для шифра
 vector<char32_t> genalphabet() {
     vector<char32_t> alphabet;
-    for (char32_t c = U'A'; c <= U'Z'; ++c) alphabet.push_back(c);
-    for (char32_t c = U'a'; c <= U'z'; ++c) alphabet.push_back(c);
-    for (char32_t c = U'А'; c <= U'Я'; ++c) alphabet.push_back(c);
-    for (char32_t c = U'а'; c <= U'я'; ++c) alphabet.push_back(c);
-    for (char32_t c = U'0'; c <= U'9'; ++c) alphabet.push_back(c);
+
+    // A-Z
+    for (char32_t c = 0x41; c <= 0x5A; ++c) alphabet.push_back(c);
+    // a-z
+    for (char32_t c = 0x61; c <= 0x7A; ++c) alphabet.push_back(c);
+    // А-Я
+    for (char32_t c = 0x410; c <= 0x42F; ++c) alphabet.push_back(c);
+    // а-я
+    for (char32_t c = 0x430; c <= 0x44F; ++c) alphabet.push_back(c);
+    // 0-9
+    for (char32_t c = 0x30; c <= 0x39; ++c) alphabet.push_back(c);
+
+    // Знаки препинания
     const char32_t punct[] = {
-        U' ', U'!', U'@', U'#', U'$', U'%', U'^', U'&', U'*',
-        U'(', U')', U'-', U'_', U'=', U'+', U'\\', U'|', U'/',
-        U'"', U':', U';', U'.', U',', U'?'
+        0x20,  // ' '
+        0x21,  // '!'
+        0x40,  // '@'
+        0x23,  // '#'
+        0x24,  // '$'
+        0x25,  // '%'
+        0x5E,  // '^'
+        0x26,  // '&'
+        0x2A,  // '*'
+        0x28,  // '('
+        0x29,  // ')'
+        0x2D,  // '-'
+        0x5F,  // '_'
+        0x3D,  // '='
+        0x2B,  // '+'
+        0x5C,  // '\'
+        0x7C,  // '|'
+        0x2F,  // '/'
+        0x22,  // '"'
+        0x3A,  // ':'
+        0x3B,  // ';'
+        0x2E,  // '.'
+        0x2C,  // ','
+        0x3F   // '?'
     };
     for (char32_t c : punct) alphabet.push_back(c);
 
@@ -56,15 +80,12 @@ int gcd_euclidext(int a, int b, int& u) {
 // Обратный элемент
 int modInverse(int a, int m) {
     int u = 0;
-    int gcd = gcd_euclidext(mod(a, m), m, u); // mod на случай отрицательного a
-    if (gcd != 1) {
-        cerr << "Обратный элемент не существует!\n";
-        return 0;
-    }
+    int gcd = gcd_euclidext(mod(a, m), m, u);
+    if (gcd != 1) return 0;
     return mod(u, m);
 }
 
-//перевод символов в числа и обратно
+// Перевод символов в индексы и обратно
 int charToIndex(char32_t c, const vector<char32_t>& alphabet) {
     for (int i = 0; i < (int)alphabet.size(); i++) {
         if (alphabet[i] == c) return i;
@@ -81,24 +102,13 @@ char32_t indexToChar(int i, const vector<char32_t>& alphabet) {
     return alphabet[i];
 }
 
-// умножение матриц по модулю
-Matrix matMul(const Matrix& A, const Matrix& B, int m) {
-    int n = A.size();
-    Matrix C(n, vector<int>(n, 0));
-    for (int i = 0; i < n; ++i)
-        for (int j = 0; j < n; ++j)
-            for (int k = 0; k < n; ++k) C[i][j] = mod(C[i][j] + A[i][k] * B[k][j], m);      
-    return C;
-}
-
-// определитель матрицы
+// Определитель матрицы по модулю (метод Гаусса)
 int matDet(const Matrix& A, int m) {
     int n = A.size();
     Matrix M = A;
     int det = 1;
 
     for (int col = 0; col < n; ++col) {
-        // Ищем ненулевой элемент
         int nenull = -1;
         for (int row = col; row < n; ++row) {
             if (mod(M[row][col], m) != 0) {
@@ -107,10 +117,8 @@ int matDet(const Matrix& A, int m) {
             }
         }
 
-        // Если ненулевого элемента нет то определитель равен 0
         if (nenull == -1) return 0;
 
-        // Меняем строки местами
         if (nenull != col) {
             swap(M[nenull], M[col]);
             det = mod(-det, m);
@@ -118,29 +126,27 @@ int matDet(const Matrix& A, int m) {
 
         det = mod(det * M[col][col], m);
 
-        // Обнуляем элементы ниже диагонали
         int nenullInv = modInverse(M[col][col], m);
         for (int row = col + 1; row < n; ++row) {
             int factor = mod(M[row][col] * nenullInv, m);
-            for (int k = col; k < n; ++k) M[row][k] = mod(M[row][k] - factor * M[col][k], m);
+            for (int k = col; k < n; ++k)
+                M[row][k] = mod(M[row][k] - factor * M[col][k], m);
         }
     }
     return det;
 }
 
-// Обратная матрица
+// Обратная матрица по модулю (метод Гаусса-Жордана)
 Matrix invMatrix(const Matrix& A, int m) {
     int n = A.size();
-    
-    // расширяем матрицу
+
     Matrix M(n, vector<int>(2 * n, 0));
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) M[i][j] = mod(A[i][j], m);
-        M[i][i + n] = 1; // ед. матрица справа
+        M[i][i + n] = 1;
     }
 
     for (int col = 0; col < n; ++col) {
-        // Ищем ненулевой элемент
         int nenull = -1;
         for (int row = col; row < n; ++row) {
             if (mod(M[row][col], m) != 0) {
@@ -154,32 +160,151 @@ Matrix invMatrix(const Matrix& A, int m) {
             return {};
         }
 
-        // Меняем строки местами
         if (nenull != col) swap(M[nenull], M[col]);
 
-        // делаем единичную матрицу слева
         int nenullInv = modInverse(M[col][col], m);
-        for (int j = 0; j < 2 * n; ++j) M[col][j] = mod(M[col][j] * nenullInv, m);
-        
+        for (int j = 0; j < 2 * n; ++j)
+            M[col][j] = mod(M[col][j] * nenullInv, m);
+
         for (int row = 0; row < n; ++row) {
             if (row == col) continue;
             int fac = M[row][col];
-            for (int j = 0; j < 2 * n; j++) M[row][j] = mod(M[row][j] - fac * M[col][j], m);
+            for (int j = 0; j < 2 * n; ++j)
+                M[row][j] = mod(M[row][j] - fac * M[col][j], m);
         }
     }
 
-    // получаем нужную матрицу из правой части
     Matrix res(n, vector<int>(n));
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) res[i][j] = M[i][j + n];
-    }
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j)
+            res[i][j] = M[i][j + n];
     return res;
 }
 
+// Проверка ключа
+bool isRightKey(const Matrix& A, int m) {
+    int det = matDet(A, m);
+    if (det == 0) return false;
+    int u = 0;
+    return gcd_euclidext(det, m, u) == 1;
+}
 
+// UTF-8 строка → вектор кодпоинтов
+vector<char32_t> to_codes(const string& str) {
+    vector<char32_t> codes;
+    for (size_t i = 0; i < str.length(); ) {
+        unsigned char c = str[i];
+        if (c <= 0x7F) {
+            codes.push_back((char32_t)c);
+            i += 1;
+        } else if ((c & 0xE0) == 0xC0 && i + 1 < str.length()) {
+            codes.push_back((char32_t)(((str[i] & 0x1F) << 6) | (str[i+1] & 0x3F)));
+            i += 2;
+        } else if ((c & 0xF0) == 0xE0 && i + 2 < str.length()) {
+            codes.push_back((char32_t)(((str[i] & 0x0F) << 12) | ((str[i+1] & 0x3F) << 6) | (str[i+2] & 0x3F)));
+            i += 3;
+        } else if ((c & 0xF8) == 0xF0 && i + 3 < str.length()) {
+            codes.push_back((char32_t)(((str[i] & 0x07) << 18) | ((str[i+1] & 0x3F) << 12) | ((str[i+2] & 0x3F) << 6) | (str[i+3] & 0x3F)));
+            i += 4;
+        } else {
+            i += 1;
+        }
+    }
+    return codes;
+}
 
-int main() {
-    setlocale(LC_ALL, "Rus");
+// Вектор кодпоинтов → UTF-8 строка
+string to_text(const vector<char32_t>& codes) {
+    string result;
+    for (char32_t cp : codes) {
+        if (cp < 0x80) {
+            result += (char)cp;
+        } else if (cp < 0x800) {
+            result += (char)(0xC0 | (cp >> 6));
+            result += (char)(0x80 | (cp & 0x3F));
+        } else if (cp < 0x10000) {
+            result += (char)(0xE0 | (cp >> 12));
+            result += (char)(0x80 | ((cp >> 6) & 0x3F));
+            result += (char)(0x80 | (cp & 0x3F));
+        } else {
+            result += (char)(0xF0 | (cp >> 18));
+            result += (char)(0x80 | ((cp >> 12) & 0x3F));
+            result += (char)(0x80 | ((cp >> 6) & 0x3F));
+            result += (char)(0x80 | (cp & 0x3F));
+        }
+    }
+    return result;
+}
+
+// Генерация ключевой матрицы из ключевого слова
+Matrix keyFromWord(const string& word, int n, const vector<char32_t>& alphabet) {
+    int m = alphabet.size();
+
+    // Вычисляем seed из ключевого слова
+    vector<char32_t> codes = to_codes(word);
+    size_t seed = 0;
+    for (char32_t c : codes)
+        seed ^= hash<uint32_t>{}((uint32_t)c) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+
+    mt19937 rng(seed); // генератор на основе seed
+    uniform_int_distribution<int> dist(0, m - 1);
+
+    // Генерируем матрицы пока не найдём подходящую
+    Matrix K(n, vector<int>(n));
+    do {
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                K[i][j] = dist(rng);
+    } while (!isRightKey(K, m));
+
+    return K;
+}
+
+// Шифрование
+string encrypt(const string& text, const Matrix& K, const vector<char32_t>& alphabet) {
+    int n = K.size();
+    int m = alphabet.size();
+
+    vector<char32_t> codes = to_codes(text);
+
+    while (codes.size() % n != 0)
+        codes.push_back(alphabet[0]);
+
+    vector<char32_t> result;
+
+    for (int i = 0; i < (int)codes.size(); i += n) {
+        vector<int> block(n);
+        for (int j = 0; j < n; j++) {
+            block[j] = charToIndex(codes[i + j], alphabet);
+            if (block[j] == -1) {
+                cerr << "Символ не найден в алфавите!\n";
+                return "";
+            }
+        }
+
+        vector<int> encrypted(n, 0);
+        for (int row = 0; row < n; row++)
+            for (int col = 0; col < n; col++)
+                encrypted[row] = mod(encrypted[row] + K[row][col] * block[col], m);
+
+        for (int j = 0; j < n; j++)
+            result.push_back(indexToChar(encrypted[j], alphabet));
+    }
+
+    return to_text(result);
+}
+
+// Дешифрование
+string decrypt(const string& text, const Matrix& K, const vector<char32_t>& alphabet, size_t len) {
+    if (!isRightKey(K, alphabet.size())) {
+        cerr << "Ошибка: ключ не подходит для дешифрования!\n";
+        return "";
+    }
+    Matrix Kinv = invMatrix(K, alphabet.size());
+    string decrypted = encrypt(text, Kinv, alphabet);
+
+    vector<char32_t> codes = to_codes(decrypted);
+    if (len < codes.size()) codes.resize(len);
     
-    return 0;
+    return to_text(codes);
 }

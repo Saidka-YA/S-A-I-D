@@ -56,13 +56,13 @@ Matrix loadKey(const string& filename) {
     return K;
 }
 
-void saveXorKey(const string& key, const string& filename) {
+void saveXorKey(const vector<uint64_t>& key, const string& filename) {
     ofstream f(filename);
     if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return; }
     f << key;
 }
 
-string loadXorKey(const string& filename) {
+vector<uint64_t> loadXorKey(const string& filename) {
     ifstream f(filename);
     if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return ""; }
     string key;

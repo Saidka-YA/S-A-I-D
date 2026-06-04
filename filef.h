@@ -22,7 +22,7 @@ void saveKey(const Matrix& K, const string& filename);
 Matrix loadKey(const string& filename);
 
 // Файловые операции с ключом XOR
-void saveXorKey(const string& key, const string& filename);
-string loadXorKey(const string& filename);
+void saveXorKey(const vector<uint64_t>& key, const string& filename);
+vector<uint64_t> loadXorKey(const string& filename);
 
 #endif

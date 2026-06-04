@@ -29,7 +29,7 @@ vector<char32_t> genalphabet() {
     return alphabet;
 }
 
-// UTF-8 строка → вектор кодпоинтов
+// UTF-8 строка в вектор кодпоинтов
 vector<char32_t> to_codes(const string& str) {
     vector<char32_t> codes;
     for (size_t i = 0; i < str.length(); ) {
@@ -53,7 +53,7 @@ vector<char32_t> to_codes(const string& str) {
     return codes;
 }
 
-// Вектор кодпоинтов → UTF-8 строка
+// Вектор кодпоинтов в строку
 string to_text(const vector<char32_t>& codes) {
     string result;
     for (char32_t cp : codes) {

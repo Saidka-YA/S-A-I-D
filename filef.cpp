@@ -55,3 +55,17 @@ Matrix loadKey(const string& filename) {
             f >> K[i][j];
     return K;
 }
+
+void saveXorKey(const string& key, const string& filename) {
+    ofstream f(filename);
+    if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return; }
+    f << key;
+}
+
+string loadXorKey(const string& filename) {
+    ifstream f(filename);
+    if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return ""; }
+    string key;
+    getline(f, key);
+    return key;
+}

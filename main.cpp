@@ -1,11 +1,12 @@
 #include "hill.h"
+#include "vernam.h"
 #include "filef.h"
 #include <string>
 #include <filesystem>
 
 namespace fs = filesystem;
 
-enum class Algorithm { HILL, XOR };
+enum class Algorithm { HILL, VERNAM };
 enum class Action { ENCRYPT, DECRYPT };
 enum class Source { MANUAL, FILE };
 
@@ -15,10 +16,10 @@ int main() {
     // Выбор алгоритма
     string input;
     Algorithm algo;
-    cout << "Выберите алгоритм (hill / xor): ";
+    cout << "Выберите алгоритм (hill / vernam): ";
     cin >> input;
     if (input == "hill" || input == "HILL") algo = Algorithm::HILL;
-    else if (input == "xor" || input == "XOR") algo = Algorithm::XOR;
+    else if (input == "vernam" || input == "VERNAM") algo = Algorithm::VERNAM;
     else { cerr << "Неверный выбор!\n"; return 1; }
 
     // Выбор действия
@@ -55,7 +56,6 @@ int main() {
         string encrypted;
 
         if (algo == Algorithm::HILL) {
-            // Генерируем ключ Хилла
             int n;
             cout << "Введите размер ключевой матрицы: ";
             cin >> n;
@@ -68,7 +68,6 @@ int main() {
             Matrix K = keyFromWord(keyword, n, alphabet);
             if (K.empty()) return 1;
 
-            // Сохраняем ключ
             string keyfile;
             cout << "Введите путь для сохранения ключа (или Enter чтобы пропустить): ";
             getline(cin, keyfile);
@@ -80,14 +79,32 @@ int main() {
             size_t len = to_codes(text).size();
             encrypted = hillEncrypt(text, K, alphabet);
 
-            // Сохраняем шифротекст
             string encfile;
             cout << "Введите путь для сохранения шифротекста (или Enter чтобы пропустить): ";
             getline(cin, encfile);
-            if (!encfile.empty()) {
+            if (!encfile.empty())
                 writeFile(encfile, to_string(len) + "\n" + encrypted);
+
+        } else {
+            // Вернам — ключ генерируется автоматически
+            cin.ignore();
+            vector<int> key = vernamKeyFromText(text, alphabet);
+
+            string keyfile;
+            cout << "Введите путь для сохранения ключа (или Enter чтобы пропустить): ";
+            getline(cin, keyfile);
+            if (!keyfile.empty()) {
+                saveVernamKey(key, keyfile);
+                cout << "Ключ сохранён в '" << keyfile << "'\n";
             }
 
+            encrypted = vernamEncrypt(text, key, alphabet);
+
+            string encfile;
+            cout << "Введите путь для сохранения шифротекста (или Enter чтобы пропустить): ";
+            getline(cin, encfile);
+            if (!encfile.empty())
+                writeFile(encfile, encrypted);
         }
 
         cout << "Зашифрованный текст:\n" << encrypted << "\n";
@@ -122,17 +139,19 @@ int main() {
             string encrypted = encContent.substr(newline + 1);
             decrypted = hillDecrypt(encrypted, K, alphabet, len);
 
+        } else {
+            vector<int> key = loadVernamKey(keyfile);
+            if (key.empty()) return 1;
+            decrypted = vernamDecrypt(encContent, key, alphabet);
         }
 
         cout << "Расшифрованный текст:\n" << decrypted << "\n";
 
-        // Сохраняем расшифрованный текст
         string decfile;
         cout << "Введите путь для сохранения расшифрованного текста (или Enter чтобы пропустить): ";
         getline(cin, decfile);
-        if (!decfile.empty()) {
+        if (!decfile.empty())
             writeFile(decfile, decrypted);
-        }
     }
 
     return 0;

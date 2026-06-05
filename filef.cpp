@@ -56,16 +56,18 @@ Matrix loadKey(const string& filename) {
     return K;
 }
 
-void saveVernamKey(const vector<uint8_t>& key, const string& filename) {
+// Сохранение ключа Вернама в файл
+void saveVernamKey(const vector<int>& key, const string& filename) {
     ofstream f(filename);
     if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return; }
-    for (uint8_t k : key) f << k << "\n";
+    for (int k : key) f << k << "\n";
 }
 
-vector<uint8_t> loadVernamKey(const string& filename) {
+// Загрузка ключа Вернама из файла
+vector<int> loadVernamKey(const string& filename) {
     ifstream f(filename);
     if (!f) { cerr << "Ошибка: не удалось открыть файл " << filename << "\n"; return {}; }
-    vector<uint8_t> key;
+    vector<int> key;
     int k;
     while (f >> k) key.push_back(k);
     return key;

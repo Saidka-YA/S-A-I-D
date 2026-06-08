@@ -39,5 +39,7 @@
 
 **Компиляция через терминал (g++):**
 
-bash
-g++ -std=c++11 main.cpp -o ciphers_app
+bash(Linux)
+g++ -std=c++17 main.cpp bifid.cpp adfgx.cpp hex_utils.cpp console_utils.cpp -o cipher_app
+
+./cipher_app

@@ -1,67 +1,28 @@
 #include "vernam.h"
 
-vector<int> vernamKeyFromText(const string& text, const vector<char32_t>& alphabet) {
-    int m = to_codes(text).size();
+// генерируем случайный ключ - столько байт сколько в тексте
+vector<uint8_t> vernamKeyFromText(const string& text) {
     mt19937 rng(random_device{}());
-    uniform_int_distribution<int> dist(0, (int)alphabet.size() - 1);
-    vector<int> key;
-    for (size_t i = 0; i < (size_t)m; ++i) key.push_back(dist(rng));
+    uniform_int_distribution<int> dist(0, 255);
+    vector<uint8_t> key;
+    for (size_t i = 0; i < text.size(); ++i)
+        key.push_back((uint8_t)dist(rng));
     return key;
 }
 
-// Шифрвока через Вернама по модулю m
-string vernamEncrypt(const string& text, const vector<int>& key, const vector<char32_t>& alphabet) {
-    vector<char32_t> idx = to_codes(text);
-    // проверка если ключ меньше текста
-    if (idx.size() > key.size()) {
-        cerr << "Ошибка: ключ меньше текста!";
+// xor каждого байта текста с ключом
+string vernamEncrypt(const string& text, const vector<uint8_t>& key) {
+    if (text.size() > key.size()) {
+        cerr << "Ошибка: ключ короче текста!\n";
         return "";
     }
-    int m = alphabet.size();
-    vector<char32_t> result;
-    for (int i = 0; i < (int)idx.size(); ++i) {
-        // Ищем индекс символа в алфавите
-        int textIdx = -1;
-        for (int j = 0; j < (int)alphabet.size(); ++j) {
-            if (alphabet[j] == idx[i]) {
-                textIdx = j;
-                break;
-            }
-        }
-        if (textIdx == -1) {
-            cerr << "Ошибка: символ U+" << hex << uppercase << (uint32_t)idx[i] << " не найден в алфавите!\n";
-            return "";
-        }
-        int indx = (textIdx + key[i]) % m;
-        result.push_back(alphabet[indx]);
-    }
-    return to_text(result);
+    string result = text;
+    for (size_t i = 0; i < text.size(); ++i)
+        result[i] = text[i] ^ key[i];
+    return result;
 }
 
-// Расшифровка
-string vernamDecrypt(const string& ctext, const vector<int>& key, const vector<char32_t>& alphabet) {
-    vector<char32_t> idx = to_codes(ctext);
-    if (idx.size() > key.size()) {
-        cerr << "Ошибка: ключ меньше текста!";
-        return "";
-    }
-    int m = alphabet.size();
-    vector<char32_t> result;
-    for (int i = 0; i < (int)idx.size(); ++i) {
-        // Ищем индекс символа в алфавите
-        int textIdx = -1;
-        for (int j = 0; j < (int)alphabet.size(); ++j) {
-            if (alphabet[j] == idx[i]) {
-                textIdx = j;
-                break;
-            }
-        }
-        if (textIdx == -1) {
-            cerr << "Ошибка: символ U+" << hex << uppercase << (uint32_t)idx[i] << " не найден в алфавите!\n";
-            return "";
-        }
-        int indx = (textIdx - key[i] + m) % m;
-        result.push_back(alphabet[indx]);
-    }
-    return to_text(result);
+// дешифрование - та же операция xor
+string vernamDecrypt(const string& ctext, const vector<uint8_t>& key) {
+    return vernamEncrypt(ctext, key);
 }

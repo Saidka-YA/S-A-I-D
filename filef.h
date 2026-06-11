@@ -21,8 +21,8 @@ bool writeFile(const string& path, const string& content);
 void saveKey(const Matrix& K, const string& filename);
 Matrix loadKey(const string& filename);
 
-// Файловые операции с ключом Вернама
-void saveVernamKey(const vector<int>& key, const string& filename);
-vector<int> loadVernamKey(const string& filename);
+// файловые операции с ключом Вернама
+void saveVernamKey(const vector<uint8_t>& key, const string& filename);
+vector<uint8_t> loadVernamKey(const string& filename);
 
 #endif

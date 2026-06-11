@@ -3,17 +3,16 @@
 #include "filef.h"
 #include <string>
 #include <filesystem>
+#include <cstdint>
+#include <fstream>
 
 namespace fs = filesystem;
-
 enum class Algorithm { HILL, VERNAM };
 enum class Action { ENCRYPT, DECRYPT };
 enum class Source { MANUAL, FILE };
 
 int main() {
-    vector<char32_t> alphabet = genalphabet();
-
-    // Выбор алгоритма
+    // выбор алгоритма
     string input;
     Algorithm algo;
     cout << "Выберите алгоритм (hill / vernam): ";
@@ -22,7 +21,7 @@ int main() {
     else if (input == "vernam" || input == "VERNAM") algo = Algorithm::VERNAM;
     else { cerr << "Неверный выбор!\n"; return 1; }
 
-    // Выбор действия
+    // выбор действия
     Action action;
     cout << "Выберите действие (encrypt / decrypt): ";
     cin >> input;
@@ -31,41 +30,47 @@ int main() {
     else { cerr << "Неверный выбор!\n"; return 1; }
 
     if (action == Action::ENCRYPT) {
-        // Выбор источника текста
-        Source source;
-        cout << "Выберите источник текста (manual / file): ";
-        cin >> input;
-        if (input == "manual") source = Source::MANUAL;
-        else if (input == "file") source = Source::FILE;
-        else { cerr << "Неверный выбор!\n"; return 1; }
-
         string text;
-        if (source == Source::MANUAL) {
-            cin.ignore();
-            cout << "Введите текст: ";
-            getline(cin, text);
+        if (algo == Algorithm::HILL) {
+            Source source;
+            cout << "Выберите источник текста (manual / file): ";
+            cin >> input;
+            if (input == "manual") source = Source::MANUAL;
+            else if (input == "file") source = Source::FILE;
+            else { cerr << "Неверный выбор!\n"; return 1; }
+
+            if (source == Source::MANUAL) {
+                cin.ignore();
+                cout << "Введите текст: ";
+                getline(cin, text);
+            } else {
+                string filename;
+                cout << "Введите путь к файлу: ";
+                cin >> filename;
+                cin.ignore();
+                if (!readFile(filename, text)) return 1;
+                cout << "Текст загружен (" << text.size() << " байт)\n";
+            }
         } else {
             string filename;
             cout << "Введите путь к файлу: ";
             cin >> filename;
             cin.ignore();
             if (!readFile(filename, text)) return 1;
-            cout << "Текст загружен (" << text.size() << " байт)\n";
+            cout << "Файл загружен (" << text.size() << " байт)\n";
         }
 
         string encrypted;
-
         if (algo == Algorithm::HILL) {
             int n;
             cout << "Введите размер ключевой матрицы: ";
             cin >> n;
             cin.ignore();
-
             string keyword;
             cout << "Введите ключевое слово: ";
             getline(cin, keyword);
-
-            Matrix K = keyFromWord(keyword, n, alphabet);
+            
+            Matrix K = keyFromWord(keyword, n);
             if (K.empty()) return 1;
 
             string keyfile;
@@ -76,20 +81,28 @@ int main() {
                 cout << "Ключ сохранён в '" << keyfile << "'\n";
             }
 
-            size_t len = to_codes(text).size();
-            encrypted = hillEncrypt(text, K, alphabet);
-
+            size_t len = text.size(); // ИСПРАВЛЕНО: теперь это просто размер строки в байтах
+            encrypted = hillEncrypt(text, K);
+            
             string encfile;
             cout << "Введите путь для сохранения шифротекста (или Enter чтобы пропустить): ";
             getline(cin, encfile);
-            if (!encfile.empty())
-                writeFile(encfile, to_string(len) + "\n" + encrypted);
-
+            if (!encfile.empty()) {
+                // ИСПОЛЬЗУЕМ БИНАРНЫЙ ЗАГОЛОВОК (4 байта) вместо текстового "\n".
+                // Это критически важно, так как в бинарных данных символ \n (0x0A) 
+                // может встретиться случайно и сломать поиск разделителя при дешифровании.
+                ofstream f(encfile, ios::binary);
+                if (f) {
+                    uint32_t len32 = static_cast<uint32_t>(len);
+                    f.write(reinterpret_cast<const char*>(&len32), sizeof(uint32_t));
+                    f.write(encrypted.data(), encrypted.size());
+                    f.close();
+                    cout << "Шифротекст сохранён\n";
+                }
+            }
+            cout << "Зашифровано байт: " << encrypted.size() << "\n";
         } else {
-            // Вернам — ключ генерируется автоматически
-            cin.ignore();
-            vector<int> key = vernamKeyFromText(text, alphabet);
-
+            vector<uint8_t> key = vernamKeyFromText(text);
             string keyfile;
             cout << "Введите путь для сохранения ключа (или Enter чтобы пропустить): ";
             getline(cin, keyfile);
@@ -98,61 +111,63 @@ int main() {
                 cout << "Ключ сохранён в '" << keyfile << "'\n";
             }
 
-            encrypted = vernamEncrypt(text, key, alphabet);
-
+            encrypted = vernamEncrypt(text, key);
             string encfile;
             cout << "Введите путь для сохранения шифротекста (или Enter чтобы пропустить): ";
             getline(cin, encfile);
-            if (!encfile.empty())
+            if (!encfile.empty()) {
                 writeFile(encfile, encrypted);
+            }
+            cout << "Шифрование завершено (" << encrypted.size() << " байт)\n";
         }
-
-        cout << "Зашифрованный текст:\n" << encrypted << "\n";
-
     } else {
-        // Дешифрование
+        // дешифрование
         string keyfile;
         cout << "Введите путь к файлу ключа: ";
         cin >> keyfile;
         cin.ignore();
-
         string encfile;
         cout << "Введите путь к файлу шифротекста: ";
         cin >> encfile;
         cin.ignore();
 
-        string encContent;
-        if (!readFile(encfile, encContent)) return 1;
-
         string decrypted;
-
         if (algo == Algorithm::HILL) {
             Matrix K = loadKey(keyfile);
             if (K.empty()) return 1;
 
-            size_t newline = encContent.find('\n');
-            if (newline == string::npos) {
-                cerr << "Ошибка: неверный формат файла шифротекста!\n";
+            // Читаем бинарный заголовок (первые 4 байта = исходная длина)
+            ifstream f(encfile, ios::binary);
+            if (!f) {
+                cerr << "Ошибка: не удалось открыть файл шифротекста!\n";
                 return 1;
             }
-            size_t len = stoul(encContent.substr(0, newline));
-            string encrypted = encContent.substr(newline + 1);
-            decrypted = hillDecrypt(encrypted, K, alphabet, len);
+            uint32_t len = 0;
+            f.read(reinterpret_cast<char*>(&len), sizeof(uint32_t));
+            
+            // Читаем остаток файла как сам шифротекст
+            string enc((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
+            f.close();
 
+            decrypted = hillDecrypt(enc, K, len);
+            cout << "Расшифровано байт: " << decrypted.size() << "\n";
         } else {
-            vector<int> key = loadVernamKey(keyfile);
+            vector<uint8_t> key = loadVernamKey(keyfile);
             if (key.empty()) return 1;
-            decrypted = vernamDecrypt(encContent, key, alphabet);
+            
+            string encContent;
+            if (!readFile(encfile, encContent)) return 1;
+            
+            decrypted = vernamDecrypt(encContent, key);
+            cout << "Расшифровка завершена (" << decrypted.size() << " байт)\n";
         }
 
-        cout << "Расшифрованный текст:\n" << decrypted << "\n";
-
         string decfile;
-        cout << "Введите путь для сохранения расшифрованного текста (или Enter чтобы пропустить): ";
+        cout << "Введите путь для сохранения результата (или Enter чтобы пропустить): ";
         getline(cin, decfile);
-        if (!decfile.empty())
+        if (!decfile.empty()) {
             writeFile(decfile, decrypted);
+        }
     }
-
     return 0;
 }

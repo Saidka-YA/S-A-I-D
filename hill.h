@@ -1,31 +1,23 @@
 #ifndef HILL_H
 #define HILL_H
-
 #include <vector>
-#include "textproc.h"
+#include <string>
 #include "filef.h"
-
 using namespace std;
 
 using Matrix = vector<vector<int>>;
 
-// Вспомогательная математика
+// вспомогательная математика (всегда по модулю 256)
 int mod(int a, int m);
 int gcd_euclidext(int a, int b, int& u);
 int modInverse(int a, int m);
-
-// Перевод символов в индексы и обратно
-int charToIndex(char32_t c, const vector<char32_t>& alphabet);
-char32_t indexToChar(int i, const vector<char32_t>& alphabet);
-
-// Матричные операции
 int matDet(const Matrix& A, int m);
 Matrix invMatrix(const Matrix& A, int m);
 bool isRightKey(const Matrix& A, int m);
-Matrix keyFromWord(const string& word, int n, const vector<char32_t>& alphabet);
 
-// Шифрование / дешифрование
-string hillEncrypt(const string& text, const Matrix& K, const vector<char32_t>& alphabet);
-string hillDecrypt(const string& text, const Matrix& K, const vector<char32_t>& alphabet, size_t len);
+// генерация ключа и шифрование/дешифрование (без алфавита)
+Matrix keyFromWord(const string& word, int n);
+string hillEncrypt(const string& text, const Matrix& K);
+string hillDecrypt(const string& text, const Matrix& K, size_t len);
 
 #endif

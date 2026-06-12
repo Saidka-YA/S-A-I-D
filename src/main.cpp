@@ -5,6 +5,7 @@
  */
 #include "plugin_api.h"
 #include "console_utils.h"
+#include "auth.h"
 #include <iostream>
 #include <string>
 #include <limits>
@@ -98,6 +99,11 @@ int main() {
     setupConsoleUTF8();
 
     string exe_dir = get_exe_dir();
+
+    if (!login()) {
+        cout << "Ошибка: неверный логин или пароль.\n";
+        return 1;
+    }
 
     cout << "╔═════════════════════════════════════════════╗\n";
     cout << "║ 🌸      🦋КРИПТОГРАФИЧЕСКИЕ ШИФРЫ🦋      🌺 ║\n";

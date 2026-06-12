@@ -42,7 +42,7 @@ int matDet(const Matrix& A, int m) {
     for (int col = 0; col < n; ++col) {
         int nenull = -1;
         for (int row = col; row < n; ++row) {
-            // ИСПРАВЛЕНО: ищем не просто ненулевой, а нечётный (обратимый по модулю 256)
+            // ищем ненулевой, нечётный (обратимый по модулю 256)
             if (mod(M[row][col], m) % 2 != 0) {
                 nenull = row;
                 break;
@@ -74,7 +74,7 @@ Matrix invMatrix(const Matrix& A, int m) {
     for (int col = 0; col < n; ++col) {
         int nenull = -1;
         for (int row = col; row < n; ++row) {
-            // ИСПРАВЛЕНО: ищем не просто ненулевой, а нечётный (обратимый по модулю 256)
+            // ищем ненулевой, нечётный (обратимый по модулю 256)
             if (mod(M[row][col], m) % 2 != 0) {
                 nenull = row;
                 break;

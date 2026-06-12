@@ -1,11 +1,16 @@
 #include "key_generator.h"
 #include <random>
+#include <stdexcept>
 
-std::vector<uint8_t> KeyGenerator::generate_key(size_t length) {
-    std::vector<uint8_t> key(length);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(0, 255);
+using namespace std;
+
+vector<uint8_t> KeyGenerator::generate_secure_key(size_t length) {
+    vector<uint8_t> key(length);
+    if (length == 0) return key;
+
+    random_device rd;
+    mt19937_64 gen(rd());
+    uniform_int_distribution<uint16_t> dist(0, 255);
     
     for (size_t i = 0; i < length; ++i) {
         key[i] = static_cast<uint8_t>(dist(gen));

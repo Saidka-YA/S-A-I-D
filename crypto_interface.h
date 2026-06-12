@@ -23,15 +23,15 @@ struct AlgorithmInfo {
     size_t key_size;
 };
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif
-
-#ifdef __cplusplus
 inline void secure_clear_memory(void* v, size_t n) {
     volatile uint8_t* p = static_cast<volatile uint8_t*>(v);
-    while (n--) *p++ = 0;
+    while (n--) {
+        *p++ = 0;
+    }
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <libgen.h>
 #include <cstring>
+#include <stdexcept>
+#include <cerrno>
 
 using namespace std;
 
@@ -21,17 +23,54 @@ static void flush_cin() {
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
-// ── Внутренняя утилита: проверить что директория пути существует ──────────
-static bool parent_dir_exists(const string& path) {
-    if (path.empty()) return false;
-
+// ── Внутренняя утилита: получить директорию пути ─────────────────────────
+static string get_parent_dir(const string& path) {
     char buf[4096];
     strncpy(buf, path.c_str(), sizeof(buf) - 1);
     buf[sizeof(buf) - 1] = '\0';
-    const char* dir = dirname(buf);
+    return string(dirname(buf));
+}
 
+// ── Внутренняя утилита: рекурсивно создать директории (аналог mkdir -p) ──
+static bool mkdir_p(const string& dirpath) {
+    if (dirpath.empty() || dirpath == ".") return true;
     struct stat st;
-    return (stat(dir, &st) == 0 && S_ISDIR(st.st_mode));
+    if (stat(dirpath.c_str(), &st) == 0) return S_ISDIR(st.st_mode);
+
+    string parent = get_parent_dir(dirpath);
+    if (parent != dirpath && !mkdir_p(parent)) return false;
+
+    return (mkdir(dirpath.c_str(), 0755) == 0 || errno == EEXIST);
+}
+
+// ── Внутренняя утилита: проверить существование директории пути ──────────
+static bool parent_dir_exists(const string& path) {
+    if (path.empty()) return false;
+    struct stat st;
+    string dir = get_parent_dir(path);
+    return (stat(dir.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
+}
+
+// ── Внутренняя утилита: спросить пользователя и создать директории ────────
+// Возвращает true если директория существует или успешно создана.
+static bool ensure_parent_dir(const string& path) {
+    if (parent_dir_exists(path)) return true;
+
+    string dir = get_parent_dir(path);
+    cerr << "  [!] Директория '" << dir << "' не существует.\n"
+         << "  Создать её (и все промежуточные)? [y/n]: ";
+
+    string ans;
+    if (!getline(cin, ans)) return false;
+    if (ans.empty() || (ans[0] != 'y' && ans[0] != 'Y')) return false;
+
+    if (!mkdir_p(dir)) {
+        cerr << "  [!] Не удалось создать директорию '" << dir
+             << "': " << strerror(errno) << ".\n";
+        return false;
+    }
+    cout << "  [+] Директория '" << dir << "' успешно создана.\n";
+    return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -95,18 +134,21 @@ string val_input_existing_file(const string& prompt) {
             continue;
         }
 
-        ifstream f(path, ios::binary);
-        if (!f) {
+        try {
+            ifstream f;
+            f.exceptions(ios::failbit | ios::badbit);
+            f.open(path, ios::binary);
+
+            // Проверим что файл не пустой
+            f.seekg(0, ios::end);
+            if (f.tellg() == 0) {
+                cerr << "  [!] Ошибка: файл '" << path << "' пустой.\n";
+                continue;
+            }
+        } catch (const ios_base::failure&) {
             cerr << "  [!] Ошибка: файл '" << path
                  << "' не найден или нет прав на чтение. "
                     "Проверьте путь и попробуйте снова.\n";
-            continue;
-        }
-
-        // Проверим что файл не пустой
-        f.seekg(0, ios::end);
-        if (f.tellg() == 0) {
-            cerr << "  [!] Ошибка: файл '" << path << "' пустой.\n";
             continue;
         }
 
@@ -126,14 +168,13 @@ string val_input_writable_file(const string& prompt) {
             continue;
         }
 
-        if (!parent_dir_exists(path)) {
-            cerr << "  [!] Ошибка: директория для файла '"
-                 << path << "' не существует.\n";
-            continue;
-        }
+        if (!ensure_parent_dir(path)) continue;
 
-        ofstream f(path, ios::binary | ios::app);
-        if (!f) {
+        try {
+            ofstream f;
+            f.exceptions(ios::failbit | ios::badbit);
+            f.open(path, ios::binary | ios::app);
+        } catch (const ios_base::failure&) {
             cerr << "  [!] Ошибка: невозможно создать/открыть файл '"
                  << path << "'. Проверьте права доступа.\n";
             continue;
@@ -151,14 +192,13 @@ string val_input_optional_file(const string& prompt) {
         if (!getline(cin, path)) { cin.clear(); return ""; }
         if (path.empty()) return "";
 
-        if (!parent_dir_exists(path)) {
-            cerr << "  [!] Ошибка: директория для файла '"
-                 << path << "' не существует.\n";
-            continue;
-        }
+        if (!ensure_parent_dir(path)) continue;
 
-        ofstream f(path, ios::binary | ios::app);
-        if (!f) {
+        try {
+            ofstream f;
+            f.exceptions(ios::failbit | ios::badbit);
+            f.open(path, ios::binary | ios::app);
+        } catch (const ios_base::failure&) {
             cerr << "  [!] Ошибка: невозможно создать файл '"
                  << path << "'. Проверьте права доступа.\n";
             continue;

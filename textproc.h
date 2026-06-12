@@ -6,7 +6,7 @@
 #include <string>
 using namespace std;
 
-// Теперь работаем только с байтами, алфавиты удалены
+// работаем только с байтами
 vector<char32_t> to_codes(const string& str);
 string to_text(const vector<char32_t>& codes);
 

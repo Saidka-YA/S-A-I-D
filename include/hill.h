@@ -1,31 +1,51 @@
 #ifndef HILL_H
 #define HILL_H
-
 #include <vector>
-#include "textproc.h"
+#include <string>
 #include "filef.h"
-
 using namespace std;
 
+// Ключевая матрица шифра Хилла: квадратная матрица n x n,
+// элементы — целые числа по модулю 256 (MOD в hill.cpp)
 using Matrix = vector<vector<int>>;
 
-// Вспомогательная математика
+// ── Вспомогательная модульная арифметика ───────────────────────────────────
+
+// Приведение a к диапазону [0, m) (корректно работает и для отрицательных a)
 int mod(int a, int m);
+
+// Расширенный алгоритм Евклида: возвращает gcd(a, b),
+// через выходной параметр u возвращает коэффициент Безу для a
+// (используется для вычисления обратного элемента по модулю)
 int gcd_euclidext(int a, int b, int& u);
+
+// Обратный элемент a по модулю m (0, если обратного не существует, т.е. gcd(a, m) != 1)
 int modInverse(int a, int m);
 
-// Перевод символов в индексы и обратно
-int charToIndex(char32_t c, const vector<char32_t>& alphabet);
-char32_t indexToChar(int i, const vector<char32_t>& alphabet);
-
-// Матричные операции
+// Определитель матрицы A по модулю m (метод Гаусса с приведением по модулю)
 int matDet(const Matrix& A, int m);
-Matrix invMatrix(const Matrix& A, int m);
-bool isRightKey(const Matrix& A, int m);
-Matrix keyFromWord(const string& word, int n, const vector<char32_t>& alphabet);
 
-// Шифрование / дешифрование
-string hillEncrypt(const string& text, const Matrix& K, const vector<char32_t>& alphabet);
-string hillDecrypt(const string& text, const Matrix& K, const vector<char32_t>& alphabet, size_t len);
+// Обратная матрица A^-1 по модулю m (метод Гаусса-Жордана).
+// Возвращает пустую матрицу, если A необратима по модулю m
+Matrix invMatrix(const Matrix& A, int m);
+
+// Проверка, что матрица A является корректным ключом Хилла:
+// det(A) != 0 и det(A) обратим по модулю m (т.е. gcd(det, m) == 1)
+bool isRightKey(const Matrix& A, int m);
+
+// ── Генерация ключа и шифрование/дешифрование ──────────────────────────────
+
+// Генерирует обратимую ключевую матрицу размера n x n из ключевого слова.
+// Слово используется как seed для ГПСЧ, матрица перебирается до тех пор,
+// пока isRightKey не вернёт true
+Matrix keyFromWord(const string& word, int n);
+
+// Шифрование текста матрицей K: текст дополняется нулевыми байтами до
+// длины, кратной размеру матрицы, затем каждый блок умножается на K по модулю 256
+string hillEncrypt(const string& text, const Matrix& K);
+
+// Дешифрование: вычисляет K^-1 и применяет hillEncrypt с обратной матрицей,
+// затем обрезает результат до исходной длины len (убирает padding)
+string hillDecrypt(const string& text, const Matrix& K, size_t len);
 
 #endif

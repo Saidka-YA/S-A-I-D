@@ -2,6 +2,7 @@
 #include "hex_utils.h"
 #include <vector>
 #include <algorithm>
+#include <numeric>
 #include <cctype>
 #include <stdexcept>
 #include <utility>
@@ -138,6 +139,17 @@ string columnarTransposition(const string& text, const string& keyword, bool enc
 string encryptADFGX(const string& plaintext, const string& keyword) {
     if (plaintext.empty()) return "";
     string frac = fractionate(plaintext);
+
+    // Дополняем дробную последовательность парами 'AA' (= hex 0, байт 0x00),
+    // чтобы после столбцовой перестановки общая длина оставалась кратной 4.
+    // Перестановка не меняет общую длину, поэтому достаточно сделать длину
+    // frac кратной НОК(4, длина ключа).
+    int kLen = (int)keyword.length();
+    int blockLen = (kLen > 0) ? (int)std::lcm(4, kLen) : 4;
+    while ((int)frac.length() % blockLen != 0) {
+        frac += "AA";
+    }
+
     return columnarTransposition(frac, keyword, true);
 }
 
@@ -152,5 +164,11 @@ string decryptADFGX(const string& ciphertext, const string& keyword) {
     }
     
     string transposed = columnarTransposition(clean, keyword, false);
-    return defractionate(transposed);
+    string result = defractionate(transposed);
+
+    // Убираем хвостовые нулевые байты, добавленные при выравнивании длины
+    while (!result.empty() && result.back() == '\0') {
+        result.pop_back();
+    }
+    return result;
 }

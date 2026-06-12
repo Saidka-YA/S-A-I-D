@@ -1,7 +1,7 @@
 CXX      = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -Iinclude -fPIC
 LDFLAGS  = -ldl -lstdc++fs
-TARGET   = crypto_app
+TARGET   = cryptoAppRGR
 SO_DIR   = .
 
 # ── Исходники main-приложения ──────────────────────────────────────────────

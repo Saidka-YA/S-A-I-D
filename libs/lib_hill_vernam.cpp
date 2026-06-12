@@ -15,13 +15,13 @@ using namespace std;
 
 // ── Хилл ──────────────────────────────────────────────────────────────────
 
-static void run_hill(bool do_encrypt, const vector<char32_t>& alphabet) {
+static void run_hill(bool do_encrypt) {
     if (do_encrypt) {
-        int n = val_input_int("  Размер ключевой матрицы (2–8): ", 2, 8);
+        int n = val_input_int("  Размер ключевой матрицы (2–20): ", 2, 20);
 
         string keyword = val_input_keyword("  Ключевое слово");
 
-        Matrix K = keyFromWord(keyword, n, alphabet);
+        Matrix K = keyFromWord(keyword, n);
         if (K.empty()) {
             cerr << "  [!] Ошибка: не удалось построить ключевую матрицу "
                     "из слова '" << keyword << "'.\n"
@@ -50,8 +50,8 @@ static void run_hill(bool do_encrypt, const vector<char32_t>& alphabet) {
             text = val_input_nonempty("  Введите текст: ");
         }
 
-        size_t len = to_codes(text).size();
-        string encrypted = hillEncrypt(text, K, alphabet);
+        size_t len = text.size();
+        string encrypted = hillEncrypt(text, K);
         if (src == 2) cout << "  Шифротекст:\n  " << encrypted << "\n";
 
         string encfile = val_input_optional_file("  Файл для сохранения шифротекста");
@@ -96,7 +96,7 @@ static void run_hill(bool do_encrypt, const vector<char32_t>& alphabet) {
             return;
         }
 
-        string decrypted = hillDecrypt(encrypted, K, alphabet, len);
+        string decrypted = hillDecrypt(encrypted, K, len);
         cout << "  Расшифрованный текст:\n  " << decrypted << "\n";
 
         string decfile = val_input_optional_file("  Файл для сохранения результата");
@@ -106,7 +106,7 @@ static void run_hill(bool do_encrypt, const vector<char32_t>& alphabet) {
 
 // ── Вернам ────────────────────────────────────────────────────────────────
 
-static void run_vernam(bool do_encrypt, const vector<char32_t>& alphabet) {
+static void run_vernam(bool do_encrypt) {
     if (do_encrypt) {
         cout << "  Источник текста (1 — файл, 2 — консоль): ";
         int src = val_input_int("", 1, 2);
@@ -122,7 +122,7 @@ static void run_vernam(bool do_encrypt, const vector<char32_t>& alphabet) {
             text = val_input_nonempty("  Введите текст: ");
         }
 
-        vector<int> key = vernamKeyFromText(text, alphabet);
+        vector<uint8_t> key = vernamKeyFromText(text);
 
         string keyfile = val_input_optional_file("  Файл для сохранения ключа");
         if (!keyfile.empty()) {
@@ -130,7 +130,7 @@ static void run_vernam(bool do_encrypt, const vector<char32_t>& alphabet) {
             cout << "  Ключ сохранён в '" << keyfile << "'\n";
         }
 
-        string encrypted = vernamEncrypt(text, key, alphabet);
+        string encrypted = vernamEncrypt(text, key);
         if (src == 2) cout << "  Шифротекст:\n  " << encrypted << "\n";
 
         string encfile = val_input_optional_file("  Файл для сохранения шифротекста");
@@ -138,7 +138,7 @@ static void run_vernam(bool do_encrypt, const vector<char32_t>& alphabet) {
 
     } else {
         string keyfile = val_input_existing_file("  Файл ключа");
-        vector<int> key = loadVernamKey(keyfile);
+        vector<uint8_t> key = loadVernamKey(keyfile);
         if (key.empty()) {
             cerr << "  [!] Ошибка: не удалось загрузить ключ из '" << keyfile << "'.\n"
                     "      Убедитесь, что файл создан шифром Вернама и не повреждён.\n";
@@ -156,7 +156,7 @@ static void run_vernam(bool do_encrypt, const vector<char32_t>& alphabet) {
             return;
         }
 
-        string decrypted = vernamDecrypt(encContent, key, alphabet);
+        string decrypted = vernamDecrypt(encContent, key);
         cout << "  Расшифрованный текст:\n  " << decrypted << "\n";
 
         string decfile = val_input_optional_file("  Файл для сохранения результата");
@@ -177,12 +177,10 @@ extern "C" void plugin_run() {
     int choice = val_input_int("Выбор: ", 0, 4);
     if (choice == 0) return;
 
-    vector<char32_t> alphabet = genalphabet();
-
     switch (choice) {
-        case 1: run_hill(true,    alphabet); break;
-        case 2: run_hill(false,   alphabet); break;
-        case 3: run_vernam(true,  alphabet); break;
-        case 4: run_vernam(false, alphabet); break;
+        case 1: run_hill(true);    break;
+        case 2: run_hill(false);   break;
+        case 3: run_vernam(true);  break;
+        case 4: run_vernam(false); break;
     }
 }

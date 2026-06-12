@@ -156,6 +156,14 @@ static void run_file(bool do_encrypt) {
     if (!check_crypto_result(rc, do_encrypt ? "шифрования" : "расшифрования"))
         return;
 
+    if (!do_encrypt) {
+        // Убираем хвостовой нулевой байт, добавленный при выравнивании
+        // длины до чётной при шифровании.
+        while (!result.empty() && result.back() == 0) {
+            result.pop_back();
+        }
+    }
+
     try {
         FileProcessor::write_file(outputPath, result);
     } catch (const exception& e) {

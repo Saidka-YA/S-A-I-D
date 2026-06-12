@@ -52,15 +52,19 @@ int encrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output) {
     
     for (size_t i = 0; i < input.size; i += 2) {
         int r1, c1, r2, c2;
+        bool has_second = (i + 1 < input.size);
         find_pos(table, input.data[i], r1, c1);
-        find_pos(table, (i + 1 < input.size) ? input.data[i+1] : 0, r2, c2);
+        find_pos(table, has_second ? input.data[i+1] : 0, r2, c2);
         
         if (r1 == r2) {
             output->data[i] = table[r1][(c1 + 1) % 16];
+            if (has_second) output->data[i+1] = table[r2][(c2 + 1) % 16];
         } else if (c1 == c2) {
             output->data[i] = table[(r1 + 1) % 16][c1];
+            if (has_second) output->data[i+1] = table[(r2 + 1) % 16][c2];
         } else {
             output->data[i] = table[r1][c2];
+            if (has_second) output->data[i+1] = table[r2][c1];
         }
     }
     return 0;
@@ -74,15 +78,19 @@ int decrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output) {
     
     for (size_t i = 0; i < input.size; i += 2) {
         int r1, c1, r2, c2;
+        bool has_second = (i + 1 < input.size);
         find_pos(table, input.data[i], r1, c1);
-        find_pos(table, (i + 1 < input.size) ? input.data[i+1] : 0, r2, c2);
+        find_pos(table, has_second ? input.data[i+1] : 0, r2, c2);
         
         if (r1 == r2) {
             output->data[i] = table[r1][(c1 + 15) % 16];
+            if (has_second) output->data[i+1] = table[r2][(c2 + 15) % 16];
         } else if (c1 == c2) {
             output->data[i] = table[(r1 + 15) % 16][c1];
+            if (has_second) output->data[i+1] = table[(r2 + 15) % 16][c2];
         } else {
             output->data[i] = table[r1][c2];
+            if (has_second) output->data[i+1] = table[r2][c1];
         }
     }
     return 0;

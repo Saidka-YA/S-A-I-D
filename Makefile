@@ -7,7 +7,8 @@ SO_DIR   = .
 # ── Исходники main-приложения ──────────────────────────────────────────────
 MAIN_SRCS = \
     src/main.cpp \
-    src/console_utils.cpp
+    src/console_utils.cpp \
+    src/auth.cpp
 
 MAIN_OBJS = $(MAIN_SRCS:.cpp=.o)
 
